@@ -54,20 +54,29 @@ class abuseipCommand(StreamingCommand):
                 ('verbose', ''),
             )
             # Make API Request
+            error=0
             response = req.get('https://api.abuseipdb.com/api/v2/check', headers=headers, params=params)
-            data=response.json()
-            addr_country_name = data['data']['countryName']
-            addr_domain = data['data']['domain']
-            addr_isp = data['data']['isp']
-            addr_last_reported = data['data']['lastReportedAt']
-            addr_abuse_confidence = data['data']['abuseConfidenceScore']
-
+            if(response.status_code == 200):
+                data=response.json()
+                if 'data' in data:
+                    addr_country_name = data['data']['countryName']
+                    addr_domain = data['data']['domain']
+                    addr_isp = data['data']['isp']
+                    addr_last_reported = data['data']['lastReportedAt']
+                    addr_abuse_confidence = data['data']['abuseConfidenceScore']
+                else:
+                    error=1
+                    event['AbuseApiError'] = "Invalid Response:Missing data key"
+            else:
+                error=1
+                event['AbuseApiError'] = "Invalid Request:status_code="+str(response.status_code)
             # Set event values to be returned
-            event["CountryName"] = addr_country_name
-            event["Domain"] = addr_domain
-            event["ISP"] = addr_isp
-            event["LastReportedAt"] = addr_last_reported
-            event["AbuseConfidence"] = addr_abuse_confidence
+            if error == 0:
+                event["CountryName"] = addr_country_name
+                event["Domain"] = addr_domain
+                event["ISP"] = addr_isp
+                event["LastReportedAt"] = addr_last_reported
+                event["AbuseConfidence"] = addr_abuse_confidence
 
             # Finalize event
             yield event
